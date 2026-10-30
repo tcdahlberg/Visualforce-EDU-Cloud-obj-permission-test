@@ -1,0 +1,72 @@
+# Sample academic calendar for the Education Cloud guest permission test.
+# Active terms should be visible to the site guest user (via the sharing rule).
+# Inactive terms should NOT be visible to the site guest user.
+
+- object: AcademicYear
+  nickname: year_2025_2026
+  fields:
+    Name: "[Sample] 2025-2026"
+    Year: "2025-2026"
+    Description: Sample academic year (past)
+
+- object: AcademicYear
+  nickname: year_2026_2027
+  fields:
+    Name: "[Sample] 2026-2027"
+    Year: "2026-2027"
+    Description: Sample academic year (current)
+
+- object: AcademicTerm
+  fields:
+    Name: "[Sample] Fall 2026"
+    Season: Fall
+    IsActive: true
+    StartDate: 2026-08-24
+    EndDate: 2026-12-18
+    AcademicYearId:
+      reference: year_2026_2027
+    Description: Active term - guest should see this
+
+- object: AcademicTerm
+  fields:
+    Name: "[Sample] Spring 2027"
+    Season: Spring
+    IsActive: true
+    StartDate: 2027-01-19
+    EndDate: 2027-05-14
+    AcademicYearId:
+      reference: year_2026_2027
+    Description: Active term - guest should see this
+
+- object: AcademicTerm
+  fields:
+    Name: "[Sample] Summer 2027"
+    Season: Summer
+    IsActive: true
+    StartDate: 2027-06-01
+    EndDate: 2027-08-06
+    AcademicYearId:
+      reference: year_2026_2027
+    Description: Active term - guest should see this
+
+- object: AcademicTerm
+  fields:
+    Name: "[Sample] Fall 2025"
+    Season: Fall
+    IsActive: false
+    StartDate: 2025-08-25
+    EndDate: 2025-12-19
+    AcademicYearId:
+      reference: year_2025_2026
+    Description: Inactive term - guest should NOT see this
+
+- object: AcademicTerm
+  fields:
+    Name: "[Sample] Spring 2026"
+    Season: Spring
+    IsActive: false
+    StartDate: 2026-01-20
+    EndDate: 2026-05-15
+    AcademicYearId:
+      reference: year_2025_2026
+    Description: Inactive term - guest should NOT see this

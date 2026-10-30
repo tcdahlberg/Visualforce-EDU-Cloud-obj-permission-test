@@ -1,58 +1,71 @@
-# Salesforce DX Project
+# Education Cloud Guest Permission Test
 
-Salesforce DX is a development approach that brings source-driven development, team collaboration, and continuous integration to the Salesforce Platform. Instead of working directly in an org through a web browser, you work with metadata as source files in a local DX project, track changes in version control, and deploy through automated processes.
+Tests whether the `EducationCloudGuestAccess` permission set lets a Visualforce site guest user read `AcademicTerm`.
 
-This project template gets you started with the tools and structure you need to build Salesforce applications using source control, scratch orgs, and the Salesforce CLI.
+## Result (scratch org, API 68.0, checked on two separate builds)
 
-## Prerequisites
+**The Education Cloud guest permission set does not grant a guest user read access to `AcademicTerm`. Visualforce is not the cause.**
 
-Before you start, make sure you have:
+| Check | Result |
+|---|---|
+| Guest with only page and class access | `AcademicTerm` not accessible (baseline) |
+| Add `EducationCloudGuestAccess` | No change |
+| Add the active-terms guest sharing rule | No change |
+| `System.runAs(guest)` in Apex, no Visualforce | Same result. The guest reaches 0 of the 37 objects the guest license lists |
+| Control: plain permission set granting `Account` read, queried from a Visualforce guest page | Works, so Visualforce does honor guest permission set grants |
+| Internal user with `EducationCloudAccess` | `AcademicTerm` accessible, so the test method is valid |
 
-- **Salesforce CLI** - Download from [developer.salesforce.com/tools/salesforcecli](https://developer.salesforce.com/tools/salesforcecli). See [Install Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_install_cli.htm) for details.
-- **VS Code with Salesforce Extension Pack** - See [Installation Instructions](https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/install.html) for details. Includes the Agentforce Vibes extension.
-- **A development org** - Sign up for a free Developer Edition org [here](https://developer.salesforce.com/signup).
-- **Dev Hub enabled** (optional, required to create scratch orgs) - You can enable Dev Hub in your development org under Setup > Dev Hub.  See [Provide Developers Access to Salesforce DX Tools](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_setup_dx_tools.htm).
+What the data shows:
 
-## Project Structure
+- `EducationCloudGuestAccess` stores **no** object, field, or user permissions. Its license (`EducationCloudGuestAccessPsl`) lists read on `AcademicTerm` and 36 other objects, but the guest does not get it.
+- A guest cannot be given the grant another way. The Guest User License rejects the `AccessEducationCloud` and `UseEducationCloudComp` user permissions that `EducationCloudAccess` carries (`FIELD_INTEGRITY_EXCEPTION`).
+- `AcademicTerm` is Private for external users, so a guest also needs the sharing rule. It is deployed and verified, but it cannot be exercised until the object itself is readable.
 
-Your DX project follows this structure:
+Not tested: an Aura or LWR site page. The `System.runAs` result is independent of the site type, which suggests the same outcome.
 
-- **`force-app/main/default/`** - Your metadata source files live in this default package directory. You can configure additional package directories in the `sfdx-project.json` file.
-- **`config/`** - Scratch org definitions and project settings
-- **`scripts/`** - Automation scripts for common tasks
-- **`sfdx-project.json`** - Project manifest that defines package directories, namespace, API version, and other project-level settings
+## What is in the project
 
-See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm).
+| Piece | Where |
+|---|---|
+| Scratch org definition. `enableAcademicOperations` is what creates `AcademicTerm` | `orgs/dev.json` |
+| Visualforce page that lists academic terms as the running user | `force-app/main/default/pages/EduCloudTest.page` |
+| Controller. Queries with `WITH USER_MODE` so permissions are enforced, and also counts terms in system mode so "no access" can be told apart from "no data" | `EduCloudTestController.cls` |
+| Controller tests | `EduCloudTestController_TEST.cls` |
+| Permission set granting the page and controller only, no object access | `EduCloudTest_Page_Access` |
+| Guest sharing rule for active terms | `unpackaged/config/academic_term_sharing` |
+| Sample data: 3 active and 2 inactive terms in 2 academic years | `datasets/dev/dev.recipe.yml` |
 
-## Get Started
+## Build it
 
-Ready to start developing? The [Get Started with Salesforce DX](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_get_started_dx.htm) guide walks you through your first project, from creating a scratch org to creating a simple Apex class or LWC to deploying your code to a sandbox.
+You need CumulusCI, the Salesforce CLI, and a Dev Hub that can create Education Cloud scratch orgs.
 
-## Common Salesforce CLI Commands
+```bash
+cci flow run dev_org --org dev
+```
 
-Here are common CLI commands that you'll use the most:
+This creates the scratch org and runs `config_dev`, which:
 
-- `sf org login web`: Authorize an org
-- `sf org open`: Open your org in a browser
-- `sf org create scratch`: Create a scratch org
-- `sf project deploy start`: Deploy metadata to your org
-- `sf project retrieve start`: Retrieve metadata from your org
-- `sf template generate <artifact>`: Scaffold new components, such as Apex classes and triggers, LWC components, Lightning apps, and more
-- `sf apex <command>`: Run Apex tests, run anonymous Apex blocks, and view logs
-- `sf data <command>`: Work with test data
-- `sf alias <command>`: Manage org aliases
-- `sf config <command>`: Configure CLI settings
+1. Gives the admin `EducationCloudAccess`, so `AcademicTerm` is visible and the sample data can load.
+2. Creates the `Visualforce Test` site.
+3. Deploys the active-terms guest sharing rule. This must run after the site exists because it names the site's guest user.
+4. Assigns `EduCloudTest_Page_Access` and `EducationCloudGuestAccess` to the site guest user.
+5. Creates the network member groups and publishes the site.
+6. Loads the sample academic terms.
 
-## Use Agentforce Vibes to Build Lightning Apps
+## Run the test
 
-Transform your ideas into custom Lightning apps that extend CRM workflows directly in Lightning Experience. Through natural conversations with Agentforce Vibes, implement custom objects and fields, complex business logic, and dynamic UI components. See [Build a Lightning App Using Agentforce Vibes](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/lexapp-overview.html).
+Open the page as a guest, with no login:
 
-## Additional Resources
+```
+https://<site domain>/EduCloudTest
+```
 
-- [Agentforce Vibes Developer Guide](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/einstein-overview.html)
-- [Salesforce CLI Installation Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/)
-- [Salesforce CLI Plugin Development Guide](https://developer.salesforce.com/docs/platform/salesforce-cli-plugin/guide/conceptual-overview.html)
-- [Salesforce VS Code Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
+Find the domain with `sf data query -o Visualforce-EDU-Cloud-obj-permission-test__dev -q "SELECT Domain.Domain FROM DomainSite"`.
 
+The page prints the running user, whether `AcademicTerm` is readable, how many terms that user can see, and how many exist in the org. In a working setup a guest sees the 3 active terms and none of the 2 inactive ones. Today the page reports the object as not readable.
+
+To run the Apex tests:
+
+```bash
+cci task run run_tests --org dev
+```

@@ -67,8 +67,6 @@ target/
 *.pyc
 __pycache__
 
-# Robot Framework results
-robot/SummitEventsApp/results/
 
 # Editors
 *.sublime-project

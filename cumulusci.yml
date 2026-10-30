@@ -33,18 +33,6 @@ tasks:
             template: Build Your Own
             skip_existing: True
 
-    role_to_userUser:
-        description: Give Guest User Registrant Permission Set
-        class_path: cumulusci.tasks.apex.anon.AnonymousApexTask
-        options:
-            namespace_inject: $project_config.project__package__namespace
-            apex: >
-                User userUser = [SELECT Id FROM User WHERE Alias = 'UUser' LIMIT 1];
-                Id seaUserRole = [SELECT Id FROM UserRole WHERE Name = 'Summit Events Community Owner'].Id;
-                userUser.UserRoleId = seaUserRole;
-                userUser.Country = 'United States';
-                update userUser;
-
     create_community_network:
         description: Creates the community network for Development.
         class_path: cumulusci.tasks.salesforce.network_member_group.CreateNetworkMemberGroups
@@ -52,17 +40,6 @@ tasks:
             network_name: Visualforce Test
             profile_names:
                 - Customer Community Login User
-#            permission_set_names:
-#                - Summit Events Registrant
-
-    create_community_experience_cloud_bundle:
-        description: Deploys Network config for community for Development.
-        class_path: cumulusci.tasks.salesforce.Deploy
-        options:
-            namespace_inject: $project_config.project__package__namespace
-            path: unpackaged/config/experiences
-            unmanaged: True
-            timeout: 520
 
     create_community_publish:
         description: Publishes the community for Development.
@@ -70,25 +47,38 @@ tasks:
         options:
             name: Visualforce Test
 
-    deploy_site_config:
-        description: Deploys configuration for Development.
+    assign_admin_permission_sets:
+        description: Gives the admin user Education Cloud access so AcademicTerm is visible and sample data can load.
+        class_path: cumulusci.tasks.salesforce.users.permsets.AssignPermissionSets
+        options:
+            api_names: EducationCloudAccess
+
+    deploy_academic_term_sharing:
+        description: Deploys the guest sharing rule for active AcademicTerm records. Needs the site guest user, so it runs after create_community.
         class_path: cumulusci.tasks.salesforce.Deploy
         options:
-            namespace_inject: $project_config.project__package__namespace
-            path: unpackaged/config/site
+            path: unpackaged/config/academic_term_sharing
+            unmanaged: True
+
+    assign_guest_permission_sets:
+        description: Gives the Visualforce Test site guest user page access and the Education Cloud guest permission set.
+        class_path: cumulusci.tasks.salesforce.users.permsets.AssignPermissionSets
+        options:
+            api_names: EduCloudTest_Page_Access,EducationCloudGuestAccess
+            user_alias: guest
 
 flows:
     config_dev:
         steps:
-            1.3:
-                task: role_to_userUser
+            1.5:
+                task: assign_admin_permission_sets
             3:
                 task: create_community
+            3.5:
+                task: deploy_academic_term_sharing
+            3.7:
+                task: assign_guest_permission_sets
             4:
                 task: create_community_network
-            5:
-                task: create_community_experience_cloud_bundle
-            6:
-                task: deploy_site_config
             7:
                 task: create_community_publish

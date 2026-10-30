@@ -1,0 +1,59 @@
+<!--
+ - Created by Thaddaeus Dahlberg, Software Engineer, University of St. Thomas on 10/30/26.
+ -
+ - Lists AcademicTerm records as the running user. Used to test whether the Education Cloud
+ - guest permission set lets a Visualforce site guest read AcademicTerm.
+ -->
+
+<apex:page id="EduCloudTest" controller="EduCloudTestController" showHeader="false" sidebar="false"
+           standardStylesheets="false" cache="false" docType="html-5.0">
+    <head>
+        <title>Education Cloud Guest Permission Test</title>
+        <style>
+            body { font-family: Arial, Helvetica, sans-serif; margin: 2rem; color: #222; }
+            table { border-collapse: collapse; margin-top: 1rem; }
+            th, td { border: 1px solid #bbb; padding: 0.4rem 0.8rem; text-align: left; }
+            th { background: #eee; }
+            .diagnostics { background: #f6f6f6; border: 1px solid #ddd; padding: 0.6rem 1rem; }
+            .error { color: #a00; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <h1>Education Cloud Guest Permission Test</h1>
+
+        <div class="diagnostics" id="diagnostics">
+            <div>Running user: <span id="runningUserName">{!runningUserName}</span>
+                (<span id="runningUserType">{!runningUserType}</span>)</div>
+            <div>Object readable (Schema isAccessible): <span id="objectAccessible">{!objectAccessible}</span></div>
+            <div>Academic terms visible to this user: <span id="visibleTermCount">{!academicTerms.size}</span></div>
+            <div>Academic terms in the org (system mode): <span id="totalTermCount">{!totalTermCount}</span></div>
+        </div>
+
+        <apex:outputPanel layout="block" styleClass="error" rendered="{!NOT(ISBLANK(errorMessage))}">
+            <span id="queryError">Query failed: {!errorMessage}</span>
+        </apex:outputPanel>
+
+        <apex:outputPanel layout="block" rendered="{!AND(ISBLANK(errorMessage), academicTerms.size == 0)}">
+            <p id="noTerms">The query succeeded but returned no academic terms.</p>
+        </apex:outputPanel>
+
+        <apex:outputPanel layout="block" rendered="{!academicTerms.size > 0}">
+            <table id="termTable">
+                <thead>
+                    <tr><th>Name</th><th>Season</th><th>Active</th><th>Start</th><th>End</th></tr>
+                </thead>
+                <tbody>
+                    <apex:repeat value="{!academicTerms}" var="term">
+                        <tr class="termRow">
+                            <td>{!term.Name}</td>
+                            <td>{!term.Season}</td>
+                            <td>{!term.IsActive}</td>
+                            <td><apex:outputText value="{0,date,yyyy-MM-dd}"><apex:param value="{!term.StartDate}" /></apex:outputText></td>
+                            <td><apex:outputText value="{0,date,yyyy-MM-dd}"><apex:param value="{!term.EndDate}" /></apex:outputText></td>
+                        </tr>
+                    </apex:repeat>
+                </tbody>
+            </table>
+        </apex:outputPanel>
+    </body>
+</apex:page>
