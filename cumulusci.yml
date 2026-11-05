@@ -60,12 +60,40 @@ tasks:
             path: unpackaged/config/academic_term_sharing
             unmanaged: True
 
+#    assign_guest_permission_sets:
+#        description: Gives the Visualforce Test site guest user page access and the Education Cloud guest permission set.
+#        class_path: cumulusci.tasks.salesforce.users.permsets.AssignPermissionSets
+#        options:
+#            api_names: EduCloudTest_Page_Access,EducationCloudGuestAccess
+#            user_alias: guest
+
     assign_guest_permission_sets:
-        description: Gives the Visualforce Test site guest user page access and the Education Cloud guest permission set.
-        class_path: cumulusci.tasks.salesforce.users.permsets.AssignPermissionSets
+        description: Give Guest User Registrant Permission Set
+        class_path: cumulusci.tasks.apex.anon.AnonymousApexTask
         options:
-            api_names: EduCloudTest_Page_Access,EducationCloudGuestAccess
-            user_alias: guest
+            namespace_inject: $project_config.project__package__namespace
+            apex: >
+  
+                List<Site> sites = [
+                        SELECT GuestUserId
+                        FROM Site
+                        WHERE Name = 'Visualforce_Test'
+                ];
+                
+                List<PermissionSet> eventPermissionSets;
+                eventPermissionSets = [SELECT Name, Id FROM PermissionSet WHERE Name = 'EduCloudTest_Page_Access'];
+                
+                List<PermissionSetAssignment> permissionSetList = new List<PermissionSetAssignment>();
+                
+                for (Site site : sites) {
+                    for (permissionSet ps : eventPermissionSets) {
+                        PermissionSetList.add(new PermissionSetAssignment(PermissionSetId = ps.Id, AssigneeId = site.GuestUserId));
+                    }
+                }
+                
+                if (!permissionSetList.isEmpty()) {
+                    upsert permissionSetList;
+                }
 
 flows:
     config_dev:
